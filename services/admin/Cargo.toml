@@ -1,0 +1,8 @@
+[package]
+name = "apisentinel-admin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+common = { path = "../../crates/common" }
+admin_core = { path = "../../crates/admin_core" }

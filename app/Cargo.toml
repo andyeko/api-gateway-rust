@@ -1,0 +1,16 @@
+[package]
+name = "apisentinel-app"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+gateway = []
+auth = []
+admin = []
+
+[dependencies]
+common = { path = "../crates/common" }
+gateway_core = { path = "../crates/gateway_core" }
+auth_core = { path = "../crates/auth_core" }
+admin_core = { path = "../crates/admin_core" }

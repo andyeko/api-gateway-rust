@@ -1,0 +1,20 @@
+[workspace]
+members = [
+	"app",
+	"services/gateway",
+	"services/auth",
+	"services/admin",
+	"crates/common",
+	"crates/gateway_core",
+	"crates/auth_core",
+	"crates/admin_core"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "1"

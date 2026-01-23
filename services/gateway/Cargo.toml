@@ -1,0 +1,8 @@
+[package]
+name = "apisentinel-gateway"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+common = { path = "../../crates/common" }
+gateway_core = { path = "../../crates/gateway_core" }
