@@ -6,8 +6,8 @@ pub mod server;
 pub mod types;
 pub mod wasm;
 
-pub fn run() {
+pub async fn run() -> anyhow::Result<()> {
     let config = config::GatewayConfig::default();
     wasm::init();
-    server::run(&config);
+    server::run(&config).await
 }

@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Services (Compound)" type="CompoundRunConfigurationType">
+    <toRun name="Gateway" type="CargoCommandRunConfiguration" />
+    <toRun name="Auth" type="CargoCommandRunConfiguration" />
+    <toRun name="Admin" type="CargoCommandRunConfiguration" />
+    <toRun name="Frontend" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>

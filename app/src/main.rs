@@ -9,15 +9,15 @@ async fn main() {
 
     #[cfg(feature = "gateway")]
     {
-        any = true;
-        handles.push(tokio::task::spawn_blocking(|| {
-            modules::gateway::start();
+        any |= true;
+        handles.push(tokio::spawn(async {
+            modules::gateway::start().await;
         }));
     }
 
     #[cfg(feature = "auth")]
     {
-        any = true;
+        any |= true;
         handles.push(tokio::spawn(async {
             modules::auth::start().await;
         }));
@@ -25,7 +25,7 @@ async fn main() {
 
     #[cfg(feature = "admin")]
     {
-        any = true;
+        any |= true;
         handles.push(tokio::spawn(async {
             modules::admin::start().await;
         }));

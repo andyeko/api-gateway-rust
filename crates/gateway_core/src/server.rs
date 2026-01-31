@@ -4,7 +4,7 @@ use crate::proxy::Proxy;
 use crate::rate_limit::RateLimiter;
 use crate::types::Request;
 
-pub fn run(config: &GatewayConfig) {
+pub async fn run(config: &GatewayConfig) -> anyhow::Result<()> {
     println!("gateway listening on {}", config.listen_addr);
     println!("proxying to {}", config.upstream_base);
 
@@ -19,7 +19,7 @@ pub fn run(config: &GatewayConfig) {
 
     if !limiter.allow("127.0.0.1") {
         println!("rate limited request");
-        return;
+        return Ok(());
     }
 
     match middleware::apply(&pipeline, request) {
@@ -31,4 +31,6 @@ pub fn run(config: &GatewayConfig) {
             println!("blocked: {}", res.body);
         }
     }
+    
+    Ok(())
 }

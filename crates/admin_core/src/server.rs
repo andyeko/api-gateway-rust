@@ -15,7 +15,7 @@ pub async fn run(bind_addr: &str, pool: DbPool) -> Result<(), std::io::Error> {
 
     let app = Router::new()
         .route("/users", get(list_users).post(create_user))
-        .route("/users/:id", get(get_user).put(update_user).delete(delete_user))
+        .route("/users/{id}", get(get_user).put(update_user).delete(delete_user))
         .with_state(AppState { pool })
         .layer(cors);
 
