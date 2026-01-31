@@ -13,7 +13,7 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<DbPool> {
 }
 
 pub async fn migrate(pool: &DbPool) -> anyhow::Result<()> {
-    // Create users table with password_hash for authentication
+    // Add password_hash column to users table for authentication
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
@@ -47,7 +47,7 @@ pub async fn migrate(pool: &DbPool) -> anyhow::Result<()> {
     .await
     .context("add password_hash column")?;
 
-    // Create refresh tokens table for auth
+    // Create refresh tokens table
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS refresh_tokens (

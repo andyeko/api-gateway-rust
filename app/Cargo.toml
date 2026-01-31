@@ -15,3 +15,5 @@ gateway_core = { path = "../crates/gateway_core" }
 auth_core = { path = "../crates/auth_core" }
 admin_core = { path = "../crates/admin_core" }
 tokio = { workspace = true }
+axum = { workspace = true }
+anyhow = { workspace = true }

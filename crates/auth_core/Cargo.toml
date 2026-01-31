@@ -5,4 +5,15 @@ edition.workspace = true
 
 [dependencies]
 common = { path = "../common" }
+admin_core = { path = "../admin_core" }
 anyhow = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tower-http = { workspace = true }
+jsonwebtoken = "9"
+argon2 = "0.5"
+rand = "0.8"

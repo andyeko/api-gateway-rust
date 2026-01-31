@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub mod config;
 pub mod middleware;
 pub mod proxy;
@@ -6,14 +8,28 @@ pub mod server;
 pub mod types;
 pub mod wasm;
 
+pub use config::{GatewayConfig, RouteConfig, RouteMode};
+
+/// Run gateway with default configuration (all routes proxied based on env config)
 pub async fn run() -> anyhow::Result<()> {
     let config = config::GatewayConfig::default();
     wasm::init();
     server::run(&config).await
 }
 
-pub async fn run_with_admin_router(admin_router: axum::Router) -> anyhow::Result<()> {
+/// Run gateway with embedded routers for specific routes
+/// Routes not in `routers` map will be proxied based on config
+pub async fn run_with_routers(routers: HashMap<String, axum::Router>) -> anyhow::Result<()> {
     let config = config::GatewayConfig::default();
     wasm::init();
-    server::run_with_admin_router(&config, Some(admin_router)).await
+    server::run_with_routers(&config, routers).await
+}
+
+/// Run gateway with custom config and embedded routers
+pub async fn run_with_config_and_routers(
+    config: GatewayConfig,
+    routers: HashMap<String, axum::Router>,
+) -> anyhow::Result<()> {
+    wasm::init();
+    server::run_with_routers(&config, routers).await
 }

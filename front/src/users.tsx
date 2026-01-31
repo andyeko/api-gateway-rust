@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  AppBar,
   Box,
   Button,
   Container,
@@ -17,10 +18,13 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Toolbar,
   Typography
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useAuth } from "./auth";
 
 type User = {
   id: string;
@@ -38,6 +42,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "/admin";
 const API_KEY = import.meta.env.VITE_API_KEY ?? "dev";
 
 export const UsersPage = () => {
+  const { logout, user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +156,23 @@ export const UsersPage = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            API Sentinel
+          </Typography>
+          {user && (
+            <Typography variant="body2" sx={{ mr: 2 }}>
+              {user.email}
+            </Typography>
+          )}
+          <IconButton color="inherit" onClick={logout} title="Sign out">
+            <LogoutIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack spacing={2}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4">Users</Typography>
@@ -258,5 +279,6 @@ export const UsersPage = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </>
   );
 };

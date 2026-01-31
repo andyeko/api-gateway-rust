@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -9,7 +10,7 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::routing::any;
 
-use crate::config::GatewayConfig;
+use crate::config::{GatewayConfig, RouteMode};
 use crate::middleware;
 use crate::proxy::{Proxy, bad_gateway};
 use crate::rate_limit::RateLimiter;
@@ -19,41 +20,73 @@ use crate::types::Request as GatewayRequest;
 struct GatewayState {
     limiter: Arc<RateLimiter>,
     pipeline: Arc<middleware::Pipeline>,
-    proxy: Option<Proxy>,
+    proxies: HashMap<String, Proxy>,
 }
 
+/// Run gateway with default configuration (uses env vars for route modes)
 pub async fn run(config: &GatewayConfig) -> anyhow::Result<()> {
-    run_with_admin_router(config, None).await
+    run_with_routers(config, HashMap::new()).await
 }
 
-pub async fn run_with_admin_router(
+/// Run gateway with embedded routers for specific routes
+/// Routes not in `routers` map will be proxied based on config
+pub async fn run_with_routers(
     config: &GatewayConfig,
-    admin_router: Option<Router>,
+    routers: HashMap<String, Router>,
 ) -> anyhow::Result<()> {
     println!("gateway listening on {}", config.listen_addr);
-    println!("admin upstream {}", config.admin_upstream_base);
 
     let limiter = Arc::new(RateLimiter::new(100));
     let pipeline = Arc::new(middleware::default_pipeline());
-    let proxy = if admin_router.is_some() {
-        None
-    } else {
-        Some(Proxy::new(config.admin_upstream_base.clone()))
-    };
+
+    // Build proxies for routes that are in proxy mode and not embedded
+    let mut proxies = HashMap::new();
+    for (route, route_config) in &config.routes {
+        let should_proxy = route_config.mode == RouteMode::Proxy || !routers.contains_key(route);
+        if should_proxy && !route_config.upstream_base.is_empty() {
+            println!(
+                "  route {} -> proxy to {}",
+                route, route_config.upstream_base
+            );
+            proxies.insert(route.clone(), Proxy::new(&route_config.upstream_base));
+        } else if routers.contains_key(route) {
+            println!("  route {} -> embedded", route);
+        }
+    }
 
     let state = Arc::new(GatewayState {
         limiter,
         pipeline,
-        proxy,
+        proxies,
     });
 
-    let app = if let Some(admin_router) = admin_router {
-        Router::new().nest("/admin", admin_router)
-    } else {
-        Router::new()
-            .route("/admin", any(proxy_admin))
-            .route("/admin/*path", any(proxy_admin))
-    };
+    // Build the router
+    let mut app = Router::new();
+
+    // Add embedded routers
+    for (route, router) in routers {
+        app = app.nest(&route, router);
+    }
+
+    // Add proxy routes for remaining routes
+    for (route, _) in &state.proxies {
+        let route_path = route.clone();
+        let route_any = route.clone();
+        let route_wildcard = format!("{}{{*path}}", route);
+
+        app = app
+            .route(
+                &route_any,
+                any(move |ext, req| proxy_route(ext, req, route_path.clone())),
+            )
+            .route(
+                &route_wildcard,
+                any({
+                    let route = route.clone();
+                    move |ext, req| proxy_route(ext, req, route.clone())
+                }),
+            );
+    }
 
     let app = app
         .layer(axum::middleware::from_fn(gateway_checks))
@@ -119,15 +152,17 @@ async fn gateway_checks(
     Ok(response)
 }
 
-async fn proxy_admin(
+async fn proxy_route(
     Extension(state): Extension<Arc<GatewayState>>,
     req: Request<Body>,
+    route: String,
 ) -> Response<Body> {
-    let Some(proxy) = state.proxy.as_ref() else {
-        return (StatusCode::BAD_GATEWAY, "admin proxy not configured").into_response();
+    let Some(proxy) = state.proxies.get(&route) else {
+        return (StatusCode::BAD_GATEWAY, format!("proxy not configured for {}", route))
+            .into_response();
     };
 
-    match proxy.forward(req, "/admin").await {
+    match proxy.forward(req, &route).await {
         Ok(response) => response,
         Err(err) => bad_gateway(format!("upstream error: {err}")),
     }

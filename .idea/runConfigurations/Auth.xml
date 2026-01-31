@@ -9,7 +9,11 @@
     <option name="withSudo" value="false" />
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
-    <envs />
+    <envs>
+      <env name="DATABASE_URL" value="postgres://postgres:postgres@localhost:5432/apisentinel" />
+      <env name="AUTH_DEFAULT_ADMIN_EMAIL" value="admin@example.com" />
+      <env name="AUTH_DEFAULT_ADMIN_PASSWORD" value="admin123" />
+    </envs>
     <option name="isRedirectInput" value="false" />
     <option name="redirectInputPath" value="" />
     <method v="2">
