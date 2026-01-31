@@ -1,14 +1,18 @@
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
+use anyhow::Context;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 
-pub async fn connect(database_url: &str) -> Result<PgPool, sqlx::Error> {
-    PgPoolOptions::new()
+pub type DbPool = PgPool;
+
+pub async fn create_pool(database_url: &str) -> anyhow::Result<DbPool> {
+    let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(database_url)
         .await
+        .context("create database pool")?;
+    Ok(pool)
 }
 
-pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn migrate(pool: &DbPool) -> anyhow::Result<()> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
@@ -20,7 +24,8 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::Error> {
         "#,
     )
     .execute(pool)
-    .await?;
+    .await
+    .context("run migrations")?;
 
     Ok(())
 }

@@ -2,9 +2,9 @@ use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::DbPool;
 use crate::models::{CreateUser, UpdateUser, User};
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -17,7 +17,7 @@ pub struct ListQuery {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub pool: PgPool,
+    pub pool: DbPool,
 }
 
 pub async fn list_users(
@@ -28,29 +28,29 @@ pub async fn list_users(
     let end = query._end.unwrap_or(start + 25).max(start + 1);
     let limit = (end - start) as i64;
 
-    let total: (i64,) = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM users")
+    let total: i64 = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
         .fetch_one(&state.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let users: Vec<User> = sqlx::query_as::<_, User>(
-        "SELECT id, email, name, created_at FROM users ORDER BY created_at DESC OFFSET $1 LIMIT $2",
+    let users = sqlx::query_as::<_, User>(
+        "SELECT id, email, name, created_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     )
-    .bind(start)
     .bind(limit)
+    .bind(start)
     .fetch_all(&state.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut headers = HeaderMap::new();
-    let content_range = format!("users {}-{}/{}", start, end.saturating_sub(1), total.0);
+    let content_range = format!("users {}-{}/{}", start, end.saturating_sub(1), total);
     headers.insert(
         "Content-Range",
         HeaderValue::from_str(&content_range).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     );
     headers.insert(
         "X-Total-Count",
-        HeaderValue::from_str(&total.0.to_string())
+        HeaderValue::from_str(&total.to_string())
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     );
     headers.insert(
@@ -65,12 +65,13 @@ pub async fn get_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user: Option<User> =
-        sqlx::query_as::<_, User>("SELECT id, email, name, created_at FROM users WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, email, name, created_at FROM users WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match user {
         Some(user) => Ok(Json(user)),
@@ -84,7 +85,7 @@ pub async fn create_user(
 ) -> Result<impl IntoResponse, StatusCode> {
     let id = Uuid::new_v4();
 
-    let user: User = sqlx::query_as::<_, User>(
+    let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (id, email, name) VALUES ($1, $2, $3) RETURNING id, email, name, created_at",
     )
     .bind(id)
@@ -102,11 +103,11 @@ pub async fn update_user(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateUser>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user: Option<User> = sqlx::query_as::<_, User>(
+    let user = sqlx::query_as::<_, User>(
         "UPDATE users SET email = COALESCE($1, email), name = COALESCE($2, name) WHERE id = $3 RETURNING id, email, name, created_at",
     )
-    .bind(payload.email)
-    .bind(payload.name)
+    .bind(&payload.email)
+    .bind(&payload.name)
     .bind(id)
     .fetch_optional(&state.pool)
     .await
@@ -122,7 +123,7 @@ pub async fn delete_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user: Option<User> = sqlx::query_as::<_, User>(
+    let user = sqlx::query_as::<_, User>(
         "DELETE FROM users WHERE id = $1 RETURNING id, email, name, created_at",
     )
     .bind(id)

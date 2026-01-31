@@ -1,13 +1,13 @@
-use axum::routing::{delete, get, post, put};
+use axum::routing::get;
 use axum::Router;
-use sqlx::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::db::DbPool;
 use crate::handlers::{
     create_user, delete_user, get_user, list_users, update_user, AppState,
 };
 
-pub async fn run(bind_addr: &str, pool: PgPool) -> Result<(), std::io::Error> {
+pub async fn run(bind_addr: &str, pool: DbPool) -> Result<(), std::io::Error> {
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
