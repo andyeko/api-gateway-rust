@@ -68,5 +68,10 @@ pub fn bad_gateway(message: impl Into<String>) -> Response<Body> {
     Response::builder()
         .status(StatusCode::BAD_GATEWAY)
         .body(body)
-        .unwrap_or_else(|_| Response::builder().status(StatusCode::BAD_GATEWAY).body(Body::empty()).unwrap())
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(Body::empty())
+                .unwrap()
+        })
 }

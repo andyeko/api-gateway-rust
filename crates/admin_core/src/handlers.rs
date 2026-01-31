@@ -1,7 +1,7 @@
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
-use axum::Json;
 use uuid::Uuid;
 
 use crate::db::DbPool;
@@ -56,8 +56,7 @@ pub async fn list_users(
     );
     headers.insert(
         "X-Total-Count",
-        HeaderValue::from_str(&total.to_string())
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+        HeaderValue::from_str(&total.to_string()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     );
     headers.insert(
         "Access-Control-Expose-Headers",
@@ -71,16 +70,15 @@ pub async fn get_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user = sqlx::query_as::<_, User>(
-        "SELECT id, email, name, created_at FROM users WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|err| {
-        eprintln!("get_user error: {err}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let user =
+        sqlx::query_as::<_, User>("SELECT id, email, name, created_at FROM users WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await
+            .map_err(|err| {
+                eprintln!("get_user error: {err}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     match user {
         Some(user) => Ok(Json(user)),

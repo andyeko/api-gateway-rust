@@ -1,16 +1,17 @@
 use std::sync::Arc;
+use std::time::Instant;
 
+use axum::Router;
 use axum::body::Body;
 use axum::extract::Extension;
 use axum::http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::routing::any;
-use axum::Router;
 
 use crate::config::GatewayConfig;
 use crate::middleware;
-use crate::proxy::{bad_gateway, Proxy};
+use crate::proxy::{Proxy, bad_gateway};
 use crate::rate_limit::RateLimiter;
 use crate::types::Request as GatewayRequest;
 
@@ -67,6 +68,8 @@ async fn gateway_checks(
     mut req: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, Response<Body>> {
+    let start = Instant::now();
+    let path = req.uri().path().to_string();
     let Some(state) = req.extensions().get::<Arc<GatewayState>>() else {
         return Err((StatusCode::INTERNAL_SERVER_ERROR, "gateway state missing").into_response());
     };
@@ -84,7 +87,12 @@ async fn gateway_checks(
     gateway_req.headers = req
         .headers()
         .iter()
-        .filter_map(|(name, value)| value.to_str().ok().map(|v| (name.to_string(), v.to_string())))
+        .filter_map(|(name, value)| {
+            value
+                .to_str()
+                .ok()
+                .map(|v| (name.to_string(), v.to_string()))
+        })
         .collect();
 
     let updated = match middleware::apply(state.pipeline.as_ref(), gateway_req) {
@@ -104,7 +112,11 @@ async fn gateway_checks(
         }
     }
 
-    Ok(next.run(req).await)
+    let response = next.run(req).await;
+    let status = response.status();
+    let elapsed_ms = start.elapsed().as_millis();
+    println!("[gateway] {} {} {}ms", status.as_u16(), path, elapsed_ms);
+    Ok(response)
 }
 
 async fn proxy_admin(

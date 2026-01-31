@@ -1,11 +1,9 @@
-use axum::routing::get;
 use axum::Router;
+use axum::routing::get;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::db::DbPool;
-use crate::handlers::{
-    create_user, delete_user, get_user, list_users, update_user, AppState,
-};
+use crate::handlers::{AppState, create_user, delete_user, get_user, list_users, update_user};
 
 pub async fn run(bind_addr: &str, pool: DbPool) -> Result<(), std::io::Error> {
     let app = build_router(pool);
@@ -22,7 +20,10 @@ pub fn build_router(pool: DbPool) -> Router {
 
     Router::new()
         .route("/users", get(list_users).post(create_user))
-        .route("/users/{id}", get(get_user).put(update_user).delete(delete_user))
+        .route(
+            "/users/{id}",
+            get(get_user).put(update_user).delete(delete_user),
+        )
         .with_state(AppState { pool })
         .layer(cors)
 }
