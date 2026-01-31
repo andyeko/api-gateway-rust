@@ -1,6 +1,6 @@
 use crate::types::{Request, Response};
 
-pub trait Middleware {
+pub trait Middleware: Send + Sync {
     fn process(&self, req: Request) -> Result<Request, Response>;
 }
 
@@ -41,11 +41,13 @@ impl Middleware for HeaderInjection {
     }
 }
 
-pub fn default_pipeline() -> Vec<Box<dyn Middleware>> {
+pub type Pipeline = Vec<Box<dyn Middleware>>;
+
+pub fn default_pipeline() -> Pipeline {
     vec![Box::new(Logging), Box::new(Auth), Box::new(HeaderInjection)]
 }
 
-pub fn apply(pipeline: &[Box<dyn Middleware>], req: Request) -> Result<Request, Response> {
+pub fn apply(pipeline: &Pipeline, req: Request) -> Result<Request, Response> {
     let mut current = req;
     for step in pipeline {
         current = step.process(current)?;

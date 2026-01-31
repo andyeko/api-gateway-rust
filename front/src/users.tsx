@@ -34,7 +34,8 @@ type UserInput = {
   name: string;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:4001";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "/admin";
+const API_KEY = import.meta.env.VITE_API_KEY ?? "dev";
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -51,10 +52,9 @@ export const UsersPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `${API_BASE}/users?_start=0&_end=100`,
-        { headers: { Accept: "application/json" } }
-      );
+      const response = await fetch(`${API_BASE}/users?_start=0&_end=100`, {
+        headers: { Accept: "application/json", "x-api-key": API_KEY }
+      });
       if (!response.ok) {
         throw new Error(`Failed to load users: ${response.status}`);
       }
@@ -91,7 +91,7 @@ export const UsersPage = () => {
     try {
       const response = await fetch(`${API_BASE}/users`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify(form)
       });
       if (!response.ok) {
@@ -114,7 +114,7 @@ export const UsersPage = () => {
     try {
       const response = await fetch(`${API_BASE}/users/${editId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify(form)
       });
       if (!response.ok) {
@@ -135,7 +135,10 @@ export const UsersPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/users/${id}`, { method: "DELETE" });
+      const response = await fetch(`${API_BASE}/users/${id}`, {
+        method: "DELETE",
+        headers: { "x-api-key": API_KEY }
+      });
       if (!response.ok) {
         throw new Error(`Failed to delete user: ${response.status}`);
       }

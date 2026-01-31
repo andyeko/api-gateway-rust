@@ -1,4 +1,7 @@
-fn main() {
+#[tokio::main]
+async fn main() {
     common::init_service("gateway");
-    gateway_core::run();
+    if let Err(err) = gateway_core::run().await {
+        eprintln!("gateway service error: {err}");
+    }
 }

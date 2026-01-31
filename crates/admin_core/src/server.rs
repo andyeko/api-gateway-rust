@@ -8,17 +8,21 @@ use crate::handlers::{
 };
 
 pub async fn run(bind_addr: &str, pool: DbPool) -> Result<(), std::io::Error> {
+    let app = build_router(pool);
+
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    axum::serve(listener, app).await
+}
+
+pub fn build_router(pool: DbPool) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let app = Router::new()
+    Router::new()
         .route("/users", get(list_users).post(create_user))
         .route("/users/{id}", get(get_user).put(update_user).delete(delete_user))
         .with_state(AppState { pool })
-        .layer(cors);
-
-    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
-    axum::serve(listener, app).await
+        .layer(cors)
 }

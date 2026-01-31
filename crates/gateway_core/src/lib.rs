@@ -11,3 +11,9 @@ pub async fn run() -> anyhow::Result<()> {
     wasm::init();
     server::run(&config).await
 }
+
+pub async fn run_with_admin_router(admin_router: axum::Router) -> anyhow::Result<()> {
+    let config = config::GatewayConfig::default();
+    wasm::init();
+    server::run_with_admin_router(&config, Some(admin_router)).await
+}

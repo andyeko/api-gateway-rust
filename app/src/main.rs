@@ -23,7 +23,7 @@ async fn main() {
         }));
     }
 
-    #[cfg(feature = "admin")]
+    #[cfg(all(feature = "admin", not(feature = "gateway")))]
     {
         any |= true;
         handles.push(tokio::spawn(async {

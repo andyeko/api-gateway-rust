@@ -7,7 +7,7 @@
     </scripts>
     <node-interpreter value="project" />
     <envs>
-      <env name="VITE_API_BASE" value="http://localhost:4001" />
+      <env name="VITE_API_BASE" value="/admin" />
     </envs>
     <method v="2" />
   </configuration>

@@ -31,7 +31,10 @@ pub async fn list_users(
     let total: i64 = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
         .fetch_one(&state.pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            eprintln!("list_users count error: {err}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let users = sqlx::query_as::<_, User>(
         "SELECT id, email, name, created_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2",
@@ -40,7 +43,10 @@ pub async fn list_users(
     .bind(start)
     .fetch_all(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        eprintln!("list_users fetch error: {err}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let mut headers = HeaderMap::new();
     let content_range = format!("users {}-{}/{}", start, end.saturating_sub(1), total);
@@ -71,7 +77,10 @@ pub async fn get_user(
     .bind(id)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        eprintln!("get_user error: {err}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     match user {
         Some(user) => Ok(Json(user)),
@@ -93,7 +102,10 @@ pub async fn create_user(
     .bind(&payload.name)
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        eprintln!("create_user error: {err}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok((StatusCode::CREATED, Json(user)))
 }
@@ -111,7 +123,10 @@ pub async fn update_user(
     .bind(id)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        eprintln!("update_user error: {err}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     match user {
         Some(user) => Ok(Json(user)),
@@ -129,7 +144,10 @@ pub async fn delete_user(
     .bind(id)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        eprintln!("delete_user error: {err}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     match user {
         Some(user) => Ok(Json(user)),
