@@ -1,3 +1,7 @@
+pub mod config;
+pub mod service;
+
 pub fn run() {
-    println!("auth_core running");
+    let config = config::AuthConfig::default();
+    service::run(&config);
 }

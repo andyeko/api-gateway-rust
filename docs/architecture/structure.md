@@ -14,6 +14,9 @@ The design centers around shared core crates that are reused by both modes.
 - app/ — single-binary runtime (modules)
 - services/ — independent service binaries
 - crates/ — shared core libraries
+- front/ — React Admin UI
+- scripts/ — run helpers (single app or microservices)
+- docker-compose.yml — local Postgres
 - configs/ — config files per service
 - docs/ — design and architecture notes
 - tests/ — cross-service integration tests
@@ -52,6 +55,7 @@ Each service folder contains a standalone binary that depends on its core crate.
 ### Shared Crates
 
 - crates/common/ — shared types, errors, config helpers
+- crates/observability/ — shared observability hooks
 - crates/gateway_core/ — gateway logic (proxy, middleware, rate limiting, WASM)
 - crates/auth_core/ — auth logic
 - crates/admin_core/ — admin logic

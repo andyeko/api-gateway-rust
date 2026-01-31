@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 common = { path = "../../crates/common" }
 admin_core = { path = "../../crates/admin_core" }
+tokio = { workspace = true }

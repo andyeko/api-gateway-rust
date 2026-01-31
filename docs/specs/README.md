@@ -5,11 +5,51 @@ Build a reverse proxy capable of routing traffic, rate-limiting requests, and ex
 
 ---
 
+## Current Implementation (January 2026)
+
+- Hybrid workspace (single app + microservices)
+- Admin service exposes Users CRUD API backed by PostgreSQL
+- React Admin frontend for users management
+- Gateway core contains stubbed pipeline and proxy flow
+
+---
+
+## Local Development
+
+### Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+### Run backend (single app)
+
+```bash
+./scripts/run-app.sh "gateway,auth,admin"
+```
+
+### Run backend (microservices)
+
+```bash
+./scripts/run-services.sh --gateway --auth --admin
+```
+
+### Run frontend with backend
+
+```bash
+./scripts/run-app.sh "gateway,auth,admin" --with-front
+```
+
+Frontend runs at http://localhost:5173
+API runs at http://localhost:4001 (admin service)
+
+---
+
 ## Stage 1: The Foundation (Async I/O & Zero-Copy)
 The goal is to move bytes from a client to a backend service without unnecessary allocations.
 
 ### Requirements
-- Implement a basic HTTP server using hyper or axum.
+- Implement a basic HTTP server using axum.
 - Proxy requests to a hardcoded upstream service (e.g., localhost:8080 -> google.com).
 
 ### The Rust Challenge
@@ -76,7 +116,7 @@ Managing the boundary between the "Host" (your gateway) and the "Guest" (WASM). 
 ## Recommended Crates
 | Component       | Recommended Crate | Why? |
 |----------------|-------------------|------|
-| HTTP Engine    | hyper             | Low-level, fast, the industry standard for proxies. |
+| HTTP Engine    | axum             | Low-level, fast, the industry standard for proxies. |
 | Async Runtime  | tokio             | The de-facto standard for production Rust. |
 | Serialization  | serde             | The most powerful serialization framework in existence. |
 | Shared State   | dashmap           | High-concurrency alternative to `Mutex<HashMap>`. |

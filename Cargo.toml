@@ -5,6 +5,7 @@ members = [
 	"services/auth",
 	"services/admin",
 	"crates/common",
+	"crates/observability",
 	"crates/gateway_core",
 	"crates/auth_core",
 	"crates/admin_core"
@@ -18,3 +19,11 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1"
 thiserror = "1"
+axum = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "tls-rustls", "uuid", "chrono"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+tower-http = { version = "0.5", features = ["cors"] }
