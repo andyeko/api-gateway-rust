@@ -1,0 +1,11 @@
+[package]
+name = "contracts"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+async-trait = "0.1"
+thiserror = "2"

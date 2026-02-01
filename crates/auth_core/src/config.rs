@@ -9,6 +9,8 @@ pub struct AuthConfig {
     pub default_admin_email: Option<String>,
     /// Default admin password (only works when no users exist)
     pub default_admin_password: Option<String>,
+    /// Admin service base URL for internal API calls
+    pub admin_service_url: String,
 }
 
 impl Default for AuthConfig {
@@ -26,6 +28,8 @@ impl Default for AuthConfig {
                 .unwrap_or(300), // 5 minutes
             default_admin_email: std::env::var("AUTH_DEFAULT_ADMIN_EMAIL").ok(),
             default_admin_password: std::env::var("AUTH_DEFAULT_ADMIN_PASSWORD").ok(),
+            admin_service_url: std::env::var("ADMIN_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:4001".to_string()),
         }
     }
 }

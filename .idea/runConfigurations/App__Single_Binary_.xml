@@ -5,7 +5,9 @@
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <envs>
       <env name="DATABASE_URL" value="postgres://postgres:postgres@localhost:5432/apisentinel" />
-      <env name="ADMIN_BIND_ADDR" value="0.0.0.0:4001" />
+      <env name="GATEWAY_LISTEN_ADDR" value="0.0.0.0:4000" />
+      <env name="GATEWAY_ADMIN_MODE" value="embedded" />
+      <env name="GATEWAY_AUTH_MODE" value="embedded" />
       <env name="AUTH_ISSUER" value="apisentinel" />
       <env name="AUTH_DEFAULT_ADMIN_EMAIL" value="admin@example.com" />
       <env name="AUTH_DEFAULT_ADMIN_PASSWORD" value="admin123" />

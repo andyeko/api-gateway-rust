@@ -10,7 +10,7 @@
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
     <envs>
-      <env name="DATABASE_URL" value="postgres://postgres:postgres@localhost:5432/apisentinel" />
+      <env name="ADMIN_SERVICE_URL" value="http://localhost:4001" />
       <env name="AUTH_DEFAULT_ADMIN_EMAIL" value="admin@example.com" />
       <env name="AUTH_DEFAULT_ADMIN_PASSWORD" value="admin123" />
     </envs>

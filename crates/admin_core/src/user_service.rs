@@ -3,33 +3,43 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::db::DbPool;
+use crate::models::Role;
 
 /// User data with password hash for authentication
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserWithPassword {
     pub id: Uuid,
+    pub organisation_id: Option<Uuid>,
     pub email: String,
     pub name: String,
     pub password_hash: Option<String>,
+    pub role: Role,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Public user info (no password hash)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInfo {
     pub id: Uuid,
+    pub organisation_id: Option<Uuid>,
     pub email: String,
     pub name: String,
+    pub role: Role,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<&UserWithPassword> for UserInfo {
     fn from(user: &UserWithPassword) -> Self {
         Self {
             id: user.id,
+            organisation_id: user.organisation_id,
             email: user.email.clone(),
             name: user.name.clone(),
+            role: user.role.clone(),
             created_at: user.created_at,
+            updated_at: user.updated_at,
         }
     }
 }
@@ -56,7 +66,7 @@ impl UserService {
     /// Find user by email with password hash for authentication
     pub async fn find_by_email(&self, email: &str) -> anyhow::Result<Option<UserWithPassword>> {
         let user = sqlx::query_as::<_, UserWithPassword>(
-            "SELECT id, email, name, password_hash, created_at FROM users WHERE email = $1",
+            "SELECT id, organisation_id, email, name, password_hash, role, created_at, updated_at FROM users WHERE email = $1",
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -67,7 +77,7 @@ impl UserService {
     /// Find user by ID with password hash
     pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<UserWithPassword>> {
         let user = sqlx::query_as::<_, UserWithPassword>(
-            "SELECT id, email, name, password_hash, created_at FROM users WHERE id = $1",
+            "SELECT id, organisation_id, email, name, password_hash, role, created_at, updated_at FROM users WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -81,19 +91,23 @@ impl UserService {
         email: &str,
         name: &str,
         password_hash: &str,
+        organisation_id: Option<Uuid>,
+        role: Role,
     ) -> anyhow::Result<UserWithPassword> {
         let id = Uuid::new_v4();
         let user = sqlx::query_as::<_, UserWithPassword>(
             r#"
-            INSERT INTO users (id, email, name, password_hash)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, email, name, password_hash, created_at
+            INSERT INTO users (id, organisation_id, email, name, password_hash, role)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, organisation_id, email, name, password_hash, role, created_at, updated_at
             "#,
         )
         .bind(id)
+        .bind(organisation_id)
         .bind(email)
         .bind(name)
         .bind(password_hash)
+        .bind(role)
         .fetch_one(&self.pool)
         .await?;
         Ok(user)
@@ -101,7 +115,7 @@ impl UserService {
 
     /// Update user's password hash
     pub async fn update_password(&self, user_id: Uuid, password_hash: &str) -> anyhow::Result<()> {
-        sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+        sqlx::query("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2")
             .bind(password_hash)
             .bind(user_id)
             .execute(&self.pool)
@@ -116,6 +130,15 @@ pub struct RefreshTokenService {
     pool: DbPool,
 }
 
+/// Refresh token info with organisation_id
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RefreshTokenInfo {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub organisation_id: Option<Uuid>,
+    pub expires_at: DateTime<Utc>,
+}
+
 impl RefreshTokenService {
     pub fn new(pool: DbPool) -> Self {
         Self { pool }
@@ -125,18 +148,20 @@ impl RefreshTokenService {
     pub async fn create(
         &self,
         user_id: Uuid,
+        organisation_id: Option<Uuid>,
         token_hash: &str,
         expires_at: DateTime<Utc>,
     ) -> anyhow::Result<Uuid> {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"
-            INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO refresh_tokens (id, user_id, organisation_id, token_hash, expires_at)
+            VALUES ($1, $2, $3, $4, $5)
             "#,
         )
         .bind(id)
         .bind(user_id)
+        .bind(organisation_id)
         .bind(token_hash)
         .bind(expires_at)
         .execute(&self.pool)
@@ -148,10 +173,10 @@ impl RefreshTokenService {
     pub async fn find_by_hash(
         &self,
         token_hash: &str,
-    ) -> anyhow::Result<Option<(Uuid, Uuid, DateTime<Utc>)>> {
-        let result: Option<(Uuid, Uuid, DateTime<Utc>)> = sqlx::query_as(
+    ) -> anyhow::Result<Option<RefreshTokenInfo>> {
+        let result: Option<RefreshTokenInfo> = sqlx::query_as(
             r#"
-            SELECT id, user_id, expires_at
+            SELECT id, user_id, organisation_id, expires_at
             FROM refresh_tokens
             WHERE token_hash = $1
             "#,
@@ -172,7 +197,7 @@ impl RefreshTokenService {
         sqlx::query(
             r#"
             UPDATE refresh_tokens
-            SET token_hash = $1, expires_at = $2, created_at = NOW()
+            SET token_hash = $1, expires_at = $2, updated_at = NOW()
             WHERE id = $3
             "#,
         )

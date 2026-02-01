@@ -4,13 +4,18 @@ import {
   AppBar,
   Box,
   Button,
+  Chip,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Table,
   TableBody,
@@ -26,29 +31,57 @@ import EditIcon from "@mui/icons-material/Edit";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "./auth";
 
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "USER";
+
 type User = {
   id: string;
+  organisation_id: string | null;
   email: string;
   name: string;
+  role: Role;
   created_at: string;
+  updated_at: string;
+};
+
+type Organisation = {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type UserInput = {
   email: string;
   name: string;
+  password: string;
+  role: Role;
+  organisation_id: string | null;
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/admin";
 const API_KEY = import.meta.env.VITE_API_KEY ?? "dev";
 
+const ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "USER"];
+
+const roleColor = (role: Role): "error" | "warning" | "info" | "default" => {
+  switch (role) {
+    case "SUPER_ADMIN": return "error";
+    case "ADMIN": return "warning";
+    case "SUPERVISOR": return "info";
+    default: return "default";
+  }
+};
+
 export const UsersPage = () => {
   const { logout, user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [form, setForm] = useState<UserInput>({ email: "", name: "" });
+  const [form, setForm] = useState<UserInput>({ email: "", name: "", password: "", role: "USER", organisation_id: null });
   const [editId, setEditId] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => form.email.trim() && form.name.trim(), [form]);
@@ -72,11 +105,26 @@ export const UsersPage = () => {
     }
   };
 
+  const loadOrganisations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/organisations?_start=0&_end=100`, {
+        headers: { Accept: "application/json", "x-api-key": API_KEY }
+      });
+      if (response.ok) {
+        const data = (await response.json()) as Organisation[];
+        setOrganisations(data);
+      }
+    } catch {
+      // Organisations are optional, ignore errors
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadOrganisations();
   }, []);
 
-  const resetForm = () => setForm({ email: "", name: "" });
+  const resetForm = () => setForm({ email: "", name: "", password: "", role: "USER", organisation_id: null });
 
   const openCreate = () => {
     resetForm();
@@ -84,7 +132,13 @@ export const UsersPage = () => {
   };
 
   const openEdit = (user: User) => {
-    setForm({ email: user.email, name: user.name });
+    setForm({ 
+      email: user.email, 
+      name: user.name, 
+      password: "", 
+      role: user.role,
+      organisation_id: user.organisation_id 
+    });
     setEditId(user.id);
     setEditOpen(true);
   };
@@ -94,10 +148,21 @@ export const UsersPage = () => {
     setLoading(true);
     setError(null);
     try {
+      const payload: { email: string; name: string; password?: string; role: Role; organisation_id?: string } = {
+        email: form.email,
+        name: form.name,
+        role: form.role,
+      };
+      if (form.password.trim()) {
+        payload.password = form.password;
+      }
+      if (form.organisation_id) {
+        payload.organisation_id = form.organisation_id;
+      }
       const response = await fetch(`${API_BASE}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         throw new Error(`Failed to create user: ${response.status}`);
@@ -117,10 +182,19 @@ export const UsersPage = () => {
     setLoading(true);
     setError(null);
     try {
+      const payload: { email: string; name: string; password?: string; role: Role; organisation_id?: string | null } = {
+        email: form.email,
+        name: form.name,
+        role: form.role,
+        organisation_id: form.organisation_id,
+      };
+      if (form.password.trim()) {
+        payload.password = form.password;
+      }
       const response = await fetch(`${API_BASE}/users/${editId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         throw new Error(`Failed to update user: ${response.status}`);
@@ -155,6 +229,12 @@ export const UsersPage = () => {
     }
   };
 
+  const getOrgName = (orgId: string | null) => {
+    if (!orgId) return "-";
+    const org = organisations.find(o => o.id === orgId);
+    return org ? org.name : orgId.slice(0, 8) + "...";
+  };
+
   return (
     <>
       <AppBar position="static">
@@ -187,9 +267,10 @@ export const UsersPage = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Organisation</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -197,9 +278,16 @@ export const UsersPage = () => {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id} hover>
-                  <TableCell>{user.id}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.name}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.role.replace("_", " ")} 
+                      size="small" 
+                      color={roleColor(user.role)}
+                    />
+                  </TableCell>
+                  <TableCell>{getOrgName(user.organisation_id)}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
                   <TableCell align="right">
                     <IconButton onClick={() => openEdit(user)} size="small">
@@ -217,7 +305,7 @@ export const UsersPage = () => {
               ))}
               {!users.length && !loading && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={6} align="center">
                     No users yet.
                   </TableCell>
                 </TableRow>
@@ -243,6 +331,39 @@ export const UsersPage = () => {
               onChange={(event) => setForm({ ...form, name: event.target.value })}
               fullWidth
             />
+            <TextField
+              label="Password"
+              type="password"
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              fullWidth
+              helperText="Optional - leave empty for no password"
+            />
+            <FormControl fullWidth>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={form.role}
+                label="Role"
+                onChange={(event) => setForm({ ...form, role: event.target.value as Role })}
+              >
+                {ROLES.map((role) => (
+                  <MenuItem key={role} value={role}>{role.replace("_", " ")}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Organisation</InputLabel>
+              <Select
+                value={form.organisation_id ?? ""}
+                label="Organisation"
+                onChange={(event) => setForm({ ...form, organisation_id: event.target.value || null })}
+              >
+                <MenuItem value="">None</MenuItem>
+                {organisations.map((org) => (
+                  <MenuItem key={org.id} value={org.id}>{org.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -269,6 +390,39 @@ export const UsersPage = () => {
               onChange={(event) => setForm({ ...form, name: event.target.value })}
               fullWidth
             />
+            <TextField
+              label="New Password"
+              type="password"
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              fullWidth
+              helperText="Leave empty to keep current password"
+            />
+            <FormControl fullWidth>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={form.role}
+                label="Role"
+                onChange={(event) => setForm({ ...form, role: event.target.value as Role })}
+              >
+                {ROLES.map((role) => (
+                  <MenuItem key={role} value={role}>{role.replace("_", " ")}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Organisation</InputLabel>
+              <Select
+                value={form.organisation_id ?? ""}
+                label="Organisation"
+                onChange={(event) => setForm({ ...form, organisation_id: event.target.value || null })}
+              >
+                <MenuItem value="">None</MenuItem>
+                {organisations.map((org) => (
+                  <MenuItem key={org.id} value={org.id}>{org.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -5,16 +5,31 @@ Build a reverse proxy capable of routing traffic, rate-limiting requests, and ex
 
 ---
 
-## Current Implementation (January 2026)
+## Current Implementation (February 2026)
 
-- Hybrid workspace (single app + microservices)
-- Admin service exposes Users CRUD API backed by PostgreSQL
-- React Admin frontend for users management
-- Gateway core contains stubbed pipeline and proxy flow
+### Modular Monolith Architecture
+- **Contracts crate**: Trait-based service abstractions (`UserServiceContract`, `RefreshTokenServiceContract`)
+- **Two implementations per contract**: In-memory (monolith) and HTTP (microservices)
+- **Single codebase**: Same code runs as monolith or microservices
+
+### Services
+- **Gateway** (:4000): Routing, embedding, proxying, rate limiting
+- **Auth** (:4002): JWT authentication, refresh token rotation, Argon2 password hashing
+- **Admin** (:4001): Users CRUD, internal APIs, database operations
+
+### Frontend
+- React Admin UI with Material-UI
+- Login page with JWT authentication
+- Users management
 
 ---
 
 ## Local Development
+
+### Prerequisites
+- Rust 2024 edition
+- Docker (for PostgreSQL)
+- Node.js (for frontend)
 
 ### Start PostgreSQL
 
@@ -22,26 +37,71 @@ Build a reverse proxy capable of routing traffic, rate-limiting requests, and ex
 docker compose up -d
 ```
 
-### Run backend (single app)
+### RustRover Configurations
+
+| Configuration | Mode | Description |
+|--------------|------|-------------|
+| **App (Single Binary)** | Monolith | All services on :4000 |
+| **Monolith + Frontend** | Monolith + UI | Gateway :4000, Vite :5173 |
+| **Microservices (Backend)** | Microservices | Admin :4001, Auth :4002, Gateway :4000 |
+| **All Services (Compound)** | Microservices + UI | All services + Vite :5173 |
+
+### Command Line
 
 ```bash
-./scripts/run-app.sh "gateway,auth,admin"
+# Monolith mode
+cargo run --package apisentinel-app --features gateway,auth,admin
+
+# Microservices mode
+cargo run --package apisentinel-admin &
+cargo run --package apisentinel-auth &
+cargo run --package apisentinel-gateway &
+
+# Frontend
+cd front && npm run dev
 ```
 
-### Run backend (microservices)
+### Environment Variables
 
 ```bash
-./scripts/run-services.sh --gateway --auth --admin
+# Database
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/apisentinel
+
+# Gateway
+GATEWAY_LISTEN_ADDR=0.0.0.0:4000
+GATEWAY_ADMIN_MODE=embedded  # or proxy
+GATEWAY_AUTH_MODE=embedded   # or proxy
+
+# Auth
+AUTH_LISTEN_ADDR=0.0.0.0:4002
+AUTH_JWT_SECRET=your-secret-key
+AUTH_DEFAULT_ADMIN_EMAIL=admin@example.com
+AUTH_DEFAULT_ADMIN_PASSWORD=admin123
+
+# Admin
+ADMIN_BIND_ADDR=0.0.0.0:4001
 ```
 
-### Run frontend with backend
+### Test Login
 
 ```bash
-./scripts/run-app.sh "gateway,auth,admin" --with-front
+curl -X POST http://localhost:4000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"admin123"}'
 ```
 
-Frontend runs at http://localhost:5173
-API runs at http://localhost:4001 (admin service)
+---
+
+## Architecture
+
+See [architecture/structure.md](../architecture/structure.md) for detailed diagrams.
+
+### Key Design Decisions
+
+1. **Contracts Crate**: Defines service interfaces as traits, enabling compile-time abstraction
+2. **Two Implementations**: `InMemory*` for monolith (direct DB), `Http*` for microservices
+3. **Shared Database Pool**: In monolith mode, all services share one connection pool
+4. **Internal APIs**: Admin exposes `/internal/*` endpoints for service-to-service calls
 
 ---
 

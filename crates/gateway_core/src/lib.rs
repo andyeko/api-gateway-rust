@@ -9,6 +9,7 @@ pub mod types;
 pub mod wasm;
 
 pub use config::{GatewayConfig, RouteConfig, RouteMode};
+pub use middleware::set_jwt_secret;
 
 /// Run gateway with default configuration (all routes proxied based on env config)
 pub async fn run() -> anyhow::Result<()> {

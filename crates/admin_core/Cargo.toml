@@ -5,7 +5,10 @@ edition.workspace = true
 
 [dependencies]
 common = { path = "../common" }
+contracts = { path = "../contracts" }
 anyhow = { workspace = true }
+argon2 = "0.5"
+async-trait = "0.1"
 axum = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }

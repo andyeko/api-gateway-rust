@@ -10,3 +10,5 @@ axum = { workspace = true }
 tokio = { workspace = true }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 http-body-util = "0.1"
+jsonwebtoken = "9"
+serde = { workspace = true }

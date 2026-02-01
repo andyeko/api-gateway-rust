@@ -7,8 +7,9 @@ use argon2::{
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand::Rng;
 
+use contracts::UserWithPassword;
 use crate::config::AuthConfig;
-use crate::models::{Claims, UserWithPassword};
+use crate::models::Claims;
 
 /// Hash a password using Argon2
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
@@ -43,6 +44,8 @@ pub fn generate_access_token(user: &UserWithPassword, config: &AuthConfig) -> an
         iat: now,
         email: user.email.clone(),
         name: user.name.clone(),
+        role: user.role.to_string(),
+        org_id: user.organisation_id.map(|id| id.to_string()),
     };
 
     let token = encode(

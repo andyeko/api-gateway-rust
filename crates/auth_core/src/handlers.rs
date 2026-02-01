@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use admin_core::{RefreshTokenService, UserService, UserWithPassword};
 use axum::{
     Json,
     extract::State,
@@ -9,6 +8,8 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use uuid::Uuid;
+
+use contracts::{RefreshTokenServiceContract, Role, UserServiceContract, UserWithPassword};
 
 use crate::config::AuthConfig;
 use crate::models::{
@@ -19,10 +20,11 @@ use crate::token::{
     validate_access_token, verify_password,
 };
 
+/// Shared application state using trait objects for flexibility
 #[derive(Clone)]
 pub struct AppState {
-    pub user_service: UserService,
-    pub token_service: RefreshTokenService,
+    pub user_service: Arc<dyn UserServiceContract>,
+    pub token_service: Arc<dyn RefreshTokenServiceContract>,
     pub config: Arc<AuthConfig>,
 }
 
@@ -31,7 +33,7 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    // Check if there are any users in the database via admin_core
+    // Check if there are any users in the database via contract
     let user_count = state.user_service.count().await.unwrap_or(0);
 
     let user: Option<UserWithPassword> = if user_count == 0 {
@@ -44,10 +46,13 @@ pub async fn login(
                 // Create a virtual user for the default admin (not stored in DB)
                 Some(UserWithPassword {
                     id: Uuid::nil(), // Special ID for default admin
+                    organisation_id: None,
                     email: default_email.clone(),
                     name: "Default Admin".to_string(),
                     password_hash: None,
+                    role: Role::SuperAdmin,
                     created_at: Utc::now(),
+                    updated_at: Utc::now(),
                 })
             } else {
                 None
@@ -56,7 +61,7 @@ pub async fn login(
             None
         }
     } else {
-        // Users exist - authenticate against database via admin_core
+        // Users exist - authenticate against database via contract
         // Default admin is disabled when real users exist
         let db_user = state
             .user_service
@@ -109,12 +114,12 @@ pub async fn login(
     let refresh_token = generate_refresh_token();
     let refresh_token_hash = hash_refresh_token(&refresh_token);
 
-    // Store refresh token via admin_core (only for real users, not default admin)
+    // Store refresh token via contract (only for real users, not default admin)
     if user.id != Uuid::nil() {
         let expires_at = Utc::now() + Duration::days(7); // Refresh token valid for 7 days
         let _ = state
             .token_service
-            .create(user.id, &refresh_token_hash, expires_at)
+            .create(user.id, user.organisation_id, &refresh_token_hash, expires_at)
             .await;
     }
 
@@ -138,10 +143,14 @@ pub async fn refresh(
 ) -> impl IntoResponse {
     let token_hash = hash_refresh_token(&payload.refresh_token);
 
-    // Find the refresh token via admin_core
-    let result = state.token_service.find_by_hash(&token_hash).await.unwrap_or(None);
+    // Find the refresh token via contract
+    let result = state
+        .token_service
+        .find_by_hash(&token_hash)
+        .await
+        .unwrap_or(None);
 
-    let Some((token_id, user_id, expires_at)) = result else {
+    let Some(token_info) = result else {
         return (
             StatusCode::UNAUTHORIZED,
             Json(ErrorResponse {
@@ -153,9 +162,9 @@ pub async fn refresh(
     };
 
     // Check if token is expired
-    if expires_at < Utc::now() {
+    if token_info.expires_at < Utc::now() {
         // Delete expired token
-        let _ = state.token_service.delete(token_id).await;
+        let _ = state.token_service.delete(token_info.id).await;
 
         return (
             StatusCode::UNAUTHORIZED,
@@ -167,8 +176,12 @@ pub async fn refresh(
             .into_response();
     }
 
-    // Get user via admin_core
-    let user = state.user_service.find_by_id(user_id).await.unwrap_or(None);
+    // Get user via contract
+    let user = state
+        .user_service
+        .find_by_id(token_info.user_id)
+        .await
+        .unwrap_or(None);
 
     let Some(user) = user else {
         return (
@@ -201,10 +214,10 @@ pub async fn refresh(
     let new_refresh_token_hash = hash_refresh_token(&new_refresh_token);
     let new_expires_at = Utc::now() + Duration::days(7);
 
-    // Update refresh token via admin_core
+    // Update refresh token via contract
     let _ = state
         .token_service
-        .update(token_id, &new_refresh_token_hash, new_expires_at)
+        .update(token_info.id, &new_refresh_token_hash, new_expires_at)
         .await;
 
     (
@@ -303,10 +316,10 @@ pub async fn register(
         }
     };
 
-    // Create user via admin_core service
+    // Create user via contract (default role is User, no organisation)
     let result = state
         .user_service
-        .create(&payload.email, &payload.name, &password_hash)
+        .create(&payload.email, &payload.name, &password_hash, None, Role::User)
         .await;
 
     match result {
@@ -332,7 +345,7 @@ pub async fn register(
 
             let _ = state
                 .token_service
-                .create(user.id, &refresh_token_hash, expires_at)
+                .create(user.id, user.organisation_id, &refresh_token_hash, expires_at)
                 .await;
 
             (
@@ -348,10 +361,9 @@ pub async fn register(
                 .into_response()
         }
         Err(err) => {
-            let message = if err.to_string().contains("unique") {
-                "Email already registered".to_string()
-            } else {
-                format!("Database error: {}", err)
+            let message = match err {
+                contracts::ContractError::AlreadyExists => "Email already registered".to_string(),
+                _ => format!("Failed to create user: {}", err),
             };
 
             (

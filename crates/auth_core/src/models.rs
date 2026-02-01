@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// Re-export user types from admin_core
-pub use admin_core::{UserInfo, UserWithPassword};
+// Re-export types from contracts
+pub use contracts::{Role, UserWithPassword};
 
 /// Login request payload
 #[derive(Debug, Deserialize)]
@@ -31,16 +31,20 @@ pub struct AuthResponse {
 #[derive(Debug, Serialize)]
 pub struct AuthUserInfo {
     pub id: Uuid,
+    pub organisation_id: Option<Uuid>,
     pub email: String,
     pub name: String,
+    pub role: Role,
 }
 
 impl From<&UserWithPassword> for AuthUserInfo {
     fn from(user: &UserWithPassword) -> Self {
         Self {
             id: user.id,
+            organisation_id: user.organisation_id,
             email: user.email.clone(),
             name: user.name.clone(),
+            role: user.role,
         }
     }
 }
@@ -60,6 +64,10 @@ pub struct Claims {
     pub email: String,
     /// User name
     pub name: String,
+    /// User role
+    pub role: String,
+    /// Organisation ID (optional)
+    pub org_id: Option<String>,
 }
 
 /// Token validation response

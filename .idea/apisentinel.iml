@@ -12,6 +12,7 @@
       <sourceFolder url="file://$MODULE_DIR$/services/auth/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/services/gateway/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/contracts/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

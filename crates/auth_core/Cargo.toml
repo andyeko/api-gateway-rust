@@ -5,8 +5,9 @@ edition.workspace = true
 
 [dependencies]
 common = { path = "../common" }
-admin_core = { path = "../admin_core" }
+contracts = { path = "../contracts" }
 anyhow = { workspace = true }
+async-trait = "0.1"
 axum = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
@@ -17,3 +18,5 @@ tower-http = { workspace = true }
 jsonwebtoken = "9"
 argon2 = "0.5"
 rand = "0.8"
+reqwest = { version = "0.12", features = ["json"] }
+urlencoding = "2"

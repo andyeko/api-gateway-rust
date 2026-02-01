@@ -11,6 +11,7 @@ admin = []
 
 [dependencies]
 common = { path = "../crates/common" }
+contracts = { path = "../crates/contracts" }
 gateway_core = { path = "../crates/gateway_core" }
 auth_core = { path = "../crates/auth_core" }
 admin_core = { path = "../crates/admin_core" }

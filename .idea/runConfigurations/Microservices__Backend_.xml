@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Microservices (Backend)" type="CompoundRunConfigurationType">
+    <toRun name="Admin" type="CargoCommandRunConfiguration" />
+    <toRun name="Auth" type="CargoCommandRunConfiguration" />
+    <toRun name="Gateway" type="CargoCommandRunConfiguration" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -5,6 +5,7 @@ members = [
 	"services/auth",
 	"services/admin",
 	"crates/common",
+	"crates/contracts",
 	"crates/observability",
 	"crates/gateway_core",
 	"crates/auth_core",

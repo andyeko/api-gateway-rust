@@ -9,7 +9,14 @@
     <option name="withSudo" value="false" />
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
-    <envs />
+    <envs>
+      <env name="DATABASE_URL" value="postgres://postgres:postgres@localhost:5432/apisentinel" />
+      <env name="GATEWAY_LISTEN_ADDR" value="0.0.0.0:4000" />
+      <env name="GATEWAY_ADMIN_MODE" value="proxy" />
+      <env name="GATEWAY_AUTH_MODE" value="proxy" />
+      <env name="GATEWAY_ADMIN_UPSTREAM" value="http://localhost:4001" />
+      <env name="GATEWAY_AUTH_UPSTREAM" value="http://localhost:4002" />
+    </envs>
     <option name="isRedirectInput" value="false" />
     <option name="redirectInputPath" value="" />
     <method v="2">

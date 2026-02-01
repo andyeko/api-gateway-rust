@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE ?? "http://localhost:4002/auth";
+// Use relative URL - Vite dev server proxies to backend
+// In production, configure your web server to proxy /auth to the gateway
+const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE ?? "/auth";
 
 export type User = {
   id: string;
